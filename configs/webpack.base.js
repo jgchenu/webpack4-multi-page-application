@@ -45,10 +45,6 @@ function getEntry() {
 
 module.exports = {
     entry: getEntry(),
-    output: {
-        path: path.resolve(__dirname, '../dist'),
-        filename: '[name].js',
-    },
     module: {
         rules: [{
                 test: /\.js$/,
@@ -68,6 +64,11 @@ module.exports = {
                     "postcss-loader",
                     "less-loader"
                 ]
+            },
+            {
+                test: /\.html$/,
+                // html中的img标签
+                use: ["html-withimg-loader"]
             },
             {
                 test: /\.(png|gif|jpg)$/,
@@ -102,52 +103,36 @@ module.exports = {
 
         ]
     },
-
+	resolve: {
+		alias: {
+			'@': path.resolve(__dirname, '../src')
+		}
+	},
     //提取公共代码
     optimization: {
-        cacheGroups: {
-            vendor: { // 抽离第三方插件
-                test: /node_modules/, // 指定是node_modules下的第三方包
-                chunks: 'initial',
-                name: 'vendor', // 打包后的文件名，任意命名    
-                // 设置优先级，防止和自定义的公共代码提取时被覆盖，不进行打包
-                priority: 10
-            }
-        },
-        // 代码模块路径解析的配置
-        resolve: {
-            modules: [
-                "node_modules",
-                path.resolve(__dirname, '../src'),
-            ],
-            extensions: [".wasm", ".mjs", ".js", ".json", ".jsx", ".css"],
-            //路径别名
-            alias: {
-                '@': path.resolve(__dirname, '../src')
-            }
-        },
-        //插件
-        plugins: [
-            //html文件注入js
-            new HtmlWebPackPlugin({
-                template: "./src/index.html",
-                filename: "./index.html",
-                minify: { // 压缩 HTML 的配置
-                    minifyCSS: true, // 压缩 HTML 中出现的 CSS 代码
-                    minifyJS: true // 压缩 HTML 中出现的 JS 代码
-                }
-                //这个是相对于dist目录的路径
-            }),
-            new MiniCssExtractPlugin({
-                filename: devMode ? '[name].css' : '[name].[hash].css',
-                chunkFilename: devMode ? '[id].css' : '[id].[hash].css'
-            }),
-            // 消除冗余的css代码
-            new purifyCssWebpack({
-                paths: glob.sync(path.join(__dirname, "../src/pages/*/*.html"))
-            }),
-        ],
-    }
+		splitChunks: {
+			cacheGroups: {
+				vendor: {   // 抽离第三方插件
+					test: /node_modules/,   // 指定是node_modules下的第三方包
+					chunks: 'initial',
+					name: 'vendor',  // 打包后的文件名，任意命名    
+					// 设置优先级，防止和自定义的公共代码提取时被覆盖，不进行打包
+					priority: 10    
+				},
+				utils: { // 抽离自己写的公共代码，common这个名字可以随意起
+					chunks: 'initial',
+					name: 'common',  // 任意命名
+					minSize: 0,    // 只要超出0字节就生成一个新包
+					minChunks: 2
+				}
+			}
+		}
+    },
+
+    plugins:[// 消除冗余的css代码
+		new purifyCssWebpack({
+			paths: glob.sync(path.join(__dirname, "../src/pages/*/*.html"))
+		}),]
 }
 //配置页面
 const entryObj = getEntry();
